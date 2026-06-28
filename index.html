@@ -163,6 +163,30 @@
     .stats{grid-template-columns:1fr;gap:14px;max-width:320px}
     section{padding:84px 20px}
   }
+  /* game button */
+  .game-btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:980px;font-size:14px;font-weight:600;color:var(--accent-deep);background:#fff;border:1px solid var(--moss);cursor:pointer;transition:transform .25s,box-shadow .25s,background .25s,color .25s}
+  .game-btn:hover{transform:translateY(-2px);background:var(--moss);color:#fff;box-shadow:0 8px 22px rgba(74,119,51,.3)}
+  .game-btn:active{transform:translateY(0) scale(.97)}
+  .game-btn .leaf-ic{display:inline-block;animation:swing 3s ease-in-out infinite}
+  @keyframes swing{0%,100%{transform:rotate(-12deg)}50%{transform:rotate(12deg)}}
+
+  /* ---------- GAME OVERLAY ---------- */
+  .game-stage{position:fixed;inset:0;z-index:210;display:none;background:linear-gradient(170deg,#dfe9c4,#bcd49a 60%,#9cb584);overflow:hidden}
+  .game-stage.open{display:block}
+  #gameCanvas{display:block;width:100%;height:100%;touch-action:none}
+  .g-close{position:absolute;top:24px;right:26px;z-index:8;width:46px;height:46px;border-radius:50%;border:1px solid rgba(40,54,33,.25);background:rgba(255,255,255,.5);color:var(--forest);font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .25s,transform .25s}
+  .g-close:hover{background:#fff;transform:rotate(90deg)}
+  .g-hud{position:absolute;top:22px;left:26px;z-index:8;color:var(--forest);font-weight:700;font-size:17px;display:flex;gap:22px}
+  .g-hud .best{color:var(--accent-deep)}
+  .g-screen{position:absolute;inset:0;z-index:9;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;background:rgba(245,245,230,.55);backdrop-filter:blur(3px)}
+  .g-screen.hide{display:none}
+  .g-screen h2{font-size:clamp(32px,6vw,52px);font-weight:700;color:var(--forest);letter-spacing:-0.02em;margin-bottom:14px}
+  .g-screen p{font-size:17px;color:var(--forest-soft);max-width:420px;line-height:1.7;margin-bottom:8px}
+  .g-screen .big-score{font-size:clamp(44px,9vw,72px);font-weight:700;color:var(--moss);line-height:1;margin:6px 0 16px}
+  .g-play{margin-top:26px;display:inline-flex;align-items:center;gap:9px;padding:15px 34px;border-radius:980px;font-size:18px;font-weight:700;color:#fff;background:linear-gradient(120deg,var(--moss),var(--accent-deep));border:none;cursor:pointer;transition:transform .2s,box-shadow .25s;box-shadow:0 8px 22px rgba(74,119,51,.32)}
+  .g-play:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(74,119,51,.42)}
+  .g-play:active{transform:scale(.97)}
+
   @media(prefers-reduced-motion:reduce){*{animation:none!important}.reveal{opacity:1;transform:none}}
 </style>
 </head>
@@ -179,6 +203,7 @@
       <a href="#career">경력</a>
       <a href="#projects" class="hide-sm">프로젝트</a>
       <button class="quote-btn" id="openQuotes"><span class="spark">✦</span>오늘의 한 줄</button>
+      <button class="game-btn" id="openGame"><span class="leaf-ic">🍃</span>나뭇잎 피하기</button>
     </div>
   </nav>
 
@@ -354,6 +379,25 @@
     <div class="qs-hint">화면을 누르면 다음 한 줄 · ESC로 닫기</div>
   </div>
 
+  <!-- ================= GAME: 나뭇잎 피하기 ================= -->
+  <div class="game-stage" id="gameStage">
+    <canvas id="gameCanvas"></canvas>
+    <div class="g-hud"><span>점수 <span id="gScore">0</span></span><span class="best">최고 <span id="gBest">0</span></span></div>
+    <button class="g-close" id="closeGame" aria-label="닫기">×</button>
+    <div class="g-screen" id="gStart">
+      <h2>🍃 나뭇잎 피하기</h2>
+      <p>떨어지는 나뭇잎을 피하세요.<br>마우스(또는 손가락)를 움직여 새싹을 옮기고,<br>방향키 ← → 로도 움직일 수 있어요.</p>
+      <button class="g-play" id="gPlayBtn">시작하기</button>
+    </div>
+    <div class="g-screen hide" id="gOver">
+      <h2>아쉬워요!</h2>
+      <p>버틴 시간</p>
+      <div class="big-score"><span id="gFinal">0</span><span style="font-size:.4em">점</span></div>
+      <p id="gMsg">조용히, 그러나 끝까지. 다시 도전!</p>
+      <button class="g-play" id="gRetryBtn">다시 하기</button>
+    </div>
+  </div>
+
 <script>
   const glow=document.getElementById('glow');
   window.addEventListener('pointermove',e=>{glow.style.opacity=1;glow.style.left=e.clientX+'px';glow.style.top=e.clientY+'px';});
@@ -403,7 +447,17 @@
     {t:"지금 이 순간을 살아라.\n현재만이 우리의 것이다.",a:"마르쿠스 아우렐리우스"},
     {t:"느려도 괜찮아.\n멈추지만 않으면 돼.",a:"오늘의 너에게"},
     {t:"어제의 나보다\n한 뼘만 더.",a:"오늘의 너에게"},
-    {t:"조용히, 그러나 끝까지.",a:"오늘의 너에게"}
+    {t:"조용히, 그러나 끝까지.",a:"오늘의 너에게"},
+    {t:"인생은 자전거를 타는 것과 같다.\n균형을 잡으려면 계속 움직여야 한다.",a:"알베르트 아인슈타인"},
+    {t:"천재는 1%의 영감과\n99%의 노력이다.",a:"토머스 에디슨"},
+    {t:"일곱 번 넘어지면\n여덟 번 일어나라.",a:"일본 속담"},
+    {t:"나무를 심기 가장 좋은 때는 20년 전이었고,\n그다음으로 좋은 때는 바로 지금이다.",a:"중국 속담"},
+    {t:"산을 옮기는 사람은\n작은 돌을 옮기는 것부터 시작한다.",a:"공자"},
+    {t:"세상은 고통으로 가득하지만,\n그것을 이겨내는 일로도 가득하다.",a:"헬렌 켈러"},
+    {t:"미래는 오늘\n당신이 무엇을 하느냐에 달려 있다.",a:"마하트마 간디"},
+    {t:"에너지와 끈기는\n모든 것을 정복한다.",a:"벤저민 프랭클린"},
+    {t:"큰 산을 오르고 나면\n넘어야 할 산이 더 많다는 걸 알게 된다.",a:"넬슨 만델라"},
+    {t:"어려움은 마음을 단단하게,\n노동은 몸을 단단하게 한다.",a:"세네카"}
   ];
 
   const stage=document.getElementById('quoteStage');
@@ -450,6 +504,158 @@
   document.getElementById('closeQuotes').addEventListener('click',e=>{e.stopPropagation();closeStage();});
   stage.addEventListener('click',e=>{if(e.target===document.getElementById('closeQuotes'))return;next();startTimer();});
   document.addEventListener('keydown',e=>{if(!open)return;if(e.key==='Escape')closeStage();if(e.key==='ArrowRight'||e.key===' '){next();startTimer();}});
+
+  /* ================= GAME: 나뭇잎 피하기 ================= */
+  (function(){
+    const stageEl=document.getElementById('gameStage');
+    const canvas=document.getElementById('gameCanvas');
+    const ctx=canvas.getContext('2d');
+    const scoreEl=document.getElementById('gScore');
+    const bestEl=document.getElementById('gBest');
+    const finalEl=document.getElementById('gFinal');
+    const msgEl=document.getElementById('gMsg');
+    const startScreen=document.getElementById('gStart');
+    const overScreen=document.getElementById('gOver');
+
+    let W=0,H=0,dpr=Math.min(window.devicePixelRatio||1,2);
+    function resize(){
+      W=canvas.clientWidth;H=canvas.clientHeight;
+      canvas.width=W*dpr;canvas.height=H*dpr;
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+    }
+
+    const leafColors=['#6f9554','#9cb584','#bcd49a','#d3dd5d','#caa86a'];
+    let player,leaves,score,frame,spawnEvery,fallBase,running,raf;
+    let best=0;
+    try{best=parseInt(localStorage.getItem('leafBest')||'0',10)||0;}catch(e){best=0;}
+    bestEl.textContent=best;
+
+    function reset(){
+      resize();
+      player={x:W/2,y:H-70,r:22,tx:W/2};
+      leaves=[];score=0;frame=0;spawnEvery=42;fallBase=2.6;running=true;
+      scoreEl.textContent='0';
+    }
+
+    function spawnLeaf(){
+      const r=12+Math.random()*16;
+      leaves.push({
+        x:r+Math.random()*(W-2*r),y:-r,r:r,
+        vy:fallBase+Math.random()*1.8,
+        vx:(Math.random()-.5)*1.4,
+        rot:Math.random()*Math.PI*2,
+        vr:(Math.random()-.5)*.12,
+        sway:Math.random()*Math.PI*2,
+        color:leafColors[(Math.random()*leafColors.length)|0]
+      });
+    }
+
+    function drawLeaf(l){
+      ctx.save();ctx.translate(l.x,l.y);ctx.rotate(l.rot);
+      ctx.fillStyle=l.color;
+      ctx.beginPath();
+      ctx.moveTo(0,-l.r);
+      ctx.quadraticCurveTo(l.r,-l.r*0.2,0,l.r);
+      ctx.quadraticCurveTo(-l.r,-l.r*0.2,0,-l.r);
+      ctx.fill();
+      ctx.strokeStyle='rgba(40,54,33,.25)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(0,-l.r*.8);ctx.lineTo(0,l.r*.8);ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawPlayer(p){
+      // pot
+      ctx.fillStyle='#b07a4a';
+      ctx.beginPath();ctx.roundRect(p.x-16,p.y-2,32,22,5);ctx.fill();
+      ctx.fillStyle='#9c6a3e';
+      ctx.beginPath();ctx.roundRect(p.x-18,p.y-6,36,8,4);ctx.fill();
+      // sprout stem
+      ctx.strokeStyle='#5f8f44';ctx.lineWidth=4;ctx.lineCap='round';
+      ctx.beginPath();ctx.moveTo(p.x,p.y-4);ctx.lineTo(p.x,p.y-22);ctx.stroke();
+      // leaves
+      ctx.fillStyle='#7faa66';
+      ctx.beginPath();ctx.ellipse(p.x-7,p.y-22,8,5,-0.6,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#9cb584';
+      ctx.beginPath();ctx.ellipse(p.x+7,p.y-26,8,5,0.6,0,Math.PI*2);ctx.fill();
+    }
+
+    function loop(){
+      if(!running)return;
+      frame++;
+      ctx.clearRect(0,0,W,H);
+
+      // difficulty ramp
+      if(frame%600===0){if(spawnEvery>16)spawnEvery-=4;fallBase+=0.35;}
+      if(frame%spawnEvery===0)spawnLeaf();
+
+      // player follow
+      player.x+=(player.tx-player.x)*0.18;
+      player.x=Math.max(20,Math.min(W-20,player.x));
+      player.y=H-70;
+      drawPlayer(player);
+
+      // leaves
+      for(let i=leaves.length-1;i>=0;i--){
+        const l=leaves[i];
+        l.sway+=0.05;
+        l.y+=l.vy;l.x+=l.vx+Math.sin(l.sway)*0.6;l.rot+=l.vr;
+        drawLeaf(l);
+        // collision (circle vs player core)
+        const dx=l.x-player.x, dy=l.y-(player.y-6);
+        if(Math.hypot(dx,dy)<l.r*0.7+16){gameOver();return;}
+        if(l.y-l.r>H)leaves.splice(i,1);
+      }
+
+      score++;
+      scoreEl.textContent=Math.floor(score/6);
+      raf=requestAnimationFrame(loop);
+    }
+
+    function start(){
+      startScreen.classList.add('hide');
+      overScreen.classList.add('hide');
+      reset();
+      cancelAnimationFrame(raf);
+      raf=requestAnimationFrame(loop);
+    }
+
+    function gameOver(){
+      running=false;cancelAnimationFrame(raf);
+      const final=Math.floor(score/6);
+      finalEl.textContent=final;
+      if(final>best){best=final;try{localStorage.setItem('leafBest',best);}catch(e){}
+        bestEl.textContent=best;msgEl.textContent='🎉 최고 기록 경신! 멋져요.';}
+      else{bestEl.textContent=best;
+        const lines=['조용히, 그러나 끝까지. 다시 도전!','느려도 괜찮아, 멈추지만 않으면 돼.','한 번 더 가볼까요?','집중! 이번엔 더 멀리.'];
+        msgEl.textContent=lines[(Math.random()*lines.length)|0];}
+      overScreen.classList.remove('hide');
+    }
+
+    // controls
+    canvas.addEventListener('pointermove',e=>{const rect=canvas.getBoundingClientRect();player&&(player.tx=e.clientX-rect.left);});
+    canvas.addEventListener('touchmove',e=>{e.preventDefault();const rect=canvas.getBoundingClientRect();if(player&&e.touches[0])player.tx=e.touches[0].clientX-rect.left;},{passive:false});
+    document.addEventListener('keydown',e=>{
+      if(!stageEl.classList.contains('open')||!player)return;
+      if(e.key==='ArrowLeft')player.tx=Math.max(20,player.tx-40);
+      if(e.key==='ArrowRight')player.tx=Math.min(W-20,player.tx+40);
+    });
+
+    function openGame(){
+      stageEl.classList.add('open');document.body.style.overflow='hidden';
+      startScreen.classList.remove('hide');overScreen.classList.add('hide');
+      resize();
+      // draw idle player so screen isn't empty behind start panel
+      player={x:W/2,y:H-70,r:22,tx:W/2};ctx.clearRect(0,0,W,H);drawPlayer(player);
+    }
+    function closeGame(){stageEl.classList.remove('open');document.body.style.overflow='';running=false;cancelAnimationFrame(raf);}
+
+    document.getElementById('openGame').addEventListener('click',openGame);
+    document.getElementById('closeGame').addEventListener('click',closeGame);
+    document.getElementById('gPlayBtn').addEventListener('click',start);
+    document.getElementById('gRetryBtn').addEventListener('click',start);
+    document.addEventListener('keydown',e=>{if(stageEl.classList.contains('open')&&e.key==='Escape')closeGame();});
+    window.addEventListener('resize',()=>{if(stageEl.classList.contains('open'))resize();});
+  })();
 </script>
 </body>
 </html>
